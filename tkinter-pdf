@@ -1,0 +1,32 @@
+import fitz  # PyMuPDF
+from tkinter import *
+from tkinter import filedialog
+from PIL import Image, ImageTk
+
+def open_file():
+    file_path = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
+    if file_path:
+        pdf_document = fitz.open(file_path)
+        page = pdf_document.load_page(0)  # Assuming displaying the first page
+        page_pixmap = page.get_pixmap()
+        img = Image.frombytes("RGB", [page_pixmap.width, page_pixmap.height], page_pixmap.samples)
+        img = ImageTk.PhotoImage(img)
+
+        # Update the image on the label
+        image_label.config(image=img)
+        image_label.image = img
+
+# Tkinter setup
+root = Tk()
+root.title("PDF to Image")
+root.geometry("600x600")
+
+# Create a label to display the image
+image_label = Label(root)
+image_label.pack(expand=True)
+
+# Button to open the PDF file
+open_button = Button(root, text="Open PDF", command=open_file)
+open_button.pack()
+
+root.mainloop()
