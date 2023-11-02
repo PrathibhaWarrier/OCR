@@ -30,3 +30,65 @@ open_button = Button(root, text="Open PDF", command=open_file)
 open_button.pack()
 
 root.mainloop()
+
+###################################################################################
+
+import fitz  # PyMuPDF
+from tkinter import *
+from tkinter import filedialog
+from PIL import Image, ImageTk
+
+class PDFViewer:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("PDF Viewer")
+        self.root.geometry("600x650")
+        self.pdf_document = None
+        self.current_page = 0
+
+        self.image_label = Label(root)
+        self.image_label.pack(expand=True)
+
+        open_button = Button(root, text="Open PDF", command=self.open_file)
+        open_button.pack()
+
+        prev_button = Button(root, text="Previous Page", command=self.show_previous_page)
+        prev_button.pack()
+
+        next_button = Button(root, text="Next Page", command=self.show_next_page)
+        next_button.pack()
+
+    def open_file(self):
+        file_path = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
+        if file_path:
+            self.pdf_document = fitz.open(file_path)
+            self.current_page = 0
+            self.show_page()
+
+    def show_page(self):
+        if self.pdf_document:
+            page = self.pdf_document.load_page(self.current_page)
+            page_pixmap = page.get_pixmap()
+            img = Image.frombytes("RGB", [page_pixmap.width, page_pixmap.height], page_pixmap.samples)
+            img = ImageTk.PhotoImage(img)
+
+            self.image_label.config(image=img)
+            self.image_label.image = img
+
+    def show_next_page(self):
+        if self.pdf_document and self.current_page < self.pdf_document.page_count - 1:
+            self.current_page += 1
+            self.show_page()
+
+    def show_previous_page(self):
+        if self.pdf_document and self.current_page > 0:
+            self.current_page -= 1
+            self.show_page()
+
+def main():
+    root = Tk()
+    pdf_viewer = PDFViewer(root)
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
