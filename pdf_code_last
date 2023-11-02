@@ -1,0 +1,63 @@
+import fitz  # PyMuPDF
+from tkinter import *
+from tkinter import filedialog
+from PIL import Image, ImageTk
+import easyocr
+
+class A:
+    def __init__(self, root):
+        self.root = root
+        self.initialize_ui()
+        self.pdf_document = None
+        self.current_page = 0
+        self.results = []
+        self.image_label = Label(root)
+        self.image_label.pack(expand=True)
+
+    def initialize_ui(self):
+        # Your existing UI setup, buttons, and layout
+        self.open_button = Button(self.root, text="Open PDF", command=self.open_pdf)
+        self.open_button.pack()
+
+        # Additional buttons or fields needed for OCR output
+
+    def open_pdf(self):
+        filename = filedialog.askopenfilename(filetypes=(("PDF files", "*.pdf"),))
+        if filename:
+            self.pdf_document = fitz.open(filename)
+            self.show_page()
+
+    def show_page(self):
+        if self.pdf_document:
+            page = self.pdf_document.load_page(self.current_page)
+            pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            img = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
+            img = ImageTk.PhotoImage(img)
+
+            self.image_label.config(image=img)
+            self.image_label.image = img
+
+    def perform_ocr(self):
+        if self.pdf_document:
+            page = self.pdf_document.load_page(self.current_page)
+            pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            img = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
+            reader = easyocr.Reader(['en'])  # Change 'en' to desired language code
+            results = reader.readtext(img)
+            self.results = results
+
+            # Display or handle OCR results as needed
+            for result in results:
+                print(result)
+
+def main():
+    root = Tk()
+    app = A(root)
+
+    perform_ocr_button = Button(root, text="Perform OCR", command=app.perform_ocr)
+    perform_ocr_button.pack()
+
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
