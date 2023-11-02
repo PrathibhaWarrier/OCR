@@ -1,0 +1,34 @@
+import fitz  # PyMuPDF
+from pdf2image import convert_from_path
+import pytesseract
+from PIL import Image
+
+# Path to Tesseract executable (change this path according to your installation)
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+def extract_text_from_region(pdf_path, x1, y1, x2, y2, page_number=0):
+    # Open the PDF file using PyMuPDF
+    pdf_document = fitz.open(pdf_path)
+
+    # Get the page and crop the specific region
+    page = pdf_document.load_page(page_number)
+    page_crop = page.get_pixmap(matrix=fitz.Matrix(300 / 72, 300 / 72), clip=(x1, y1, x2, y2))
+
+    # Convert the cropped region to an image
+    image = Image.frombytes("RGB", [page_crop.width, page_crop.height], page_crop.samples)
+
+    # Save the image
+    image_path = 'cropped_region.png'
+    image.save(image_path)
+
+    # Perform OCR on the cropped region image
+    cropped_text = pytesseract.image_to_string(image)
+    return cropped_text
+
+# Example usage:
+pdf_file_path = 'your_pdf_file.pdf'
+x1, y1, x2, y2 = 100, 100, 300, 300  # Define the region of interest (coordinates in points)
+page_number = 0  # page number (0-based index)
+
+extracted_text = extract_text_from_region(pdf_file_path, x1, y1, x2, y2, page_number)
+print("Extracted Text:", extracted_text)
