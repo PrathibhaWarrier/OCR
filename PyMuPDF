@@ -1,0 +1,92 @@
+import fitz  # PyMuPDF
+from PIL import Image, ImageTk
+import tkinter as tk
+from tkinter import ttk, filedialog
+
+class PDFViewer:
+    def __init__(self, root):
+        self.root = root
+        self.pdf_document = None
+        self.images = []  # List to hold all the page images
+        self.current_page = 0
+
+        self.display = tk.Label(root)
+        self.display.pack()
+
+        self.previous_button = ttk.Button(root, text="Previous", command=self.show_previous_page)
+        self.previous_button.pack(side=tk.LEFT, padx=5, pady=5)
+        self.previous_button.pack_forget()
+
+        self.next_button = ttk.Button(root, text="Next", command=self.show_next_page)
+        self.next_button.pack(side=tk.LEFT, padx=5, pady=5)
+        self.next_button.pack_forget()
+
+        self.page_label = ttk.Label(root, text="Page:")
+        self.page_label.pack(side=tk.LEFT)
+        self.page_control = ttk.Entry(root)
+        self.page_control.pack(side=tk.LEFT)
+        self.page_control.bind('<Return>', self.show_page)
+
+        self.browse_button = ttk.Button(root, text="Browse", command=self.browse_pdf)
+        self.browse_button.pack()
+
+    def browse_pdf(self):
+        file_path = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
+        if file_path:
+            self.pdf_document = fitz.open(file_path)
+            self.images = [self.get_image_from_page(page) for page in self.pdf_document]
+            self.current_page = 0
+            self.show_page()
+            if len(self.images) > 1:
+                self.previous_button.pack(side=tk.LEFT, padx=5, pady=5)
+                self.next_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+    def get_image_from_page(self, page):
+        pix = page.get_pixmap()
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        img = img.convert("RGBA")
+        return ImageTk.PhotoImage(img)
+
+    def show_page(self, event=None):
+        if self.pdf_document and self.images:
+            page_number = self.page_control.get()
+            if page_number.isdigit():
+                page = int(page_number) - 1
+                if 0 <= page < len(self.images):
+                    self.current_page = page
+                    self.display_page()
+
+    def display_page(self):
+        self.display.config(image=self.images[self.current_page])
+        self.page_control.delete(0, tk.END)
+        self.page_control.insert(0, str(self.current_page + 1))
+
+        if len(self.images) > 1:
+            if self.current_page == 0:
+                self.previous_button.pack_forget()
+                self.next_button.pack(side=tk.LEFT, padx=5, pady=5)
+            elif self.current_page == len(self.images) - 1:
+                self.next_button.pack_forget()
+                self.previous_button.pack(side=tk.LEFT, padx=5, pady=5)
+            else:
+                self.previous_button.pack(side=tk.LEFT, padx=5, pady=5)
+                self.next_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+    def show_previous_page(self):
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.display_page()
+
+    def show_next_page(self):
+        if self.current_page < len(self.images) - 1:
+            self.current_page += 1
+            self.display_page()
+
+    def run(self):
+        self.root.mainloop()f
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.title("PDF Viewer")
+    viewer = PDFViewer(root)
+    viewer.run()
