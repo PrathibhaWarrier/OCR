@@ -1,0 +1,65 @@
+import os
+import tkinter as tk
+from tkinter import filedialog
+import fitz  # PyMuPDF
+from PIL import Image, ImageTk
+import easyocr
+
+class PDFROIExtractor:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("PDF ROI Extractor")
+
+        # Variables
+        self.pdf_folder_path = ""
+        self.pdf_files = []
+
+        # OCR
+        self.reader = easyocr.Reader(['en'])
+
+        # UI Components
+        self.load_pdf_button = tk.Button(self.master, text="Load PDF Folder", command=self.load_pdf_folder)
+        self.load_pdf_button.pack()
+
+        self.extract_rois_button = tk.Button(self.master, text="Extract ROIs from PDFs", command=self.extract_rois_from_pdfs)
+        self.extract_rois_button.pack()
+
+        # Add a scrolled text widget to display extracted text
+        self.text_area = tk.Text(self.master, wrap=tk.WORD, width=40, height=10)
+        self.text_area.pack()
+
+    def load_pdf_folder(self):
+        self.pdf_folder_path = filedialog.askdirectory(title="Select Folder Containing PDFs")
+        if self.pdf_folder_path:
+            self.pdf_files = [f for f in os.listdir(self.pdf_folder_path) if f.lower().endswith('.pdf')]
+            print(f"PDFs found in the folder: {self.pdf_files}")
+
+    def extract_rois_from_pdfs(self):
+        if not self.pdf_folder_path:
+            print("Select a folder containing PDFs.")
+            return
+
+        self.text_area.delete(1.0, tk.END)  # Clear existing text
+
+        for pdf_file in self.pdf_files:
+            pdf_path = os.path.join(self.pdf_folder_path, pdf_file)
+            self.text_area.insert(tk.END, f"\nProcessing PDF: {pdf_file}\n")
+
+            with fitz.open(pdf_path) as pdf_document:
+                for page_number in range(pdf_document.page_count):
+                    pdf_page = pdf_document[page_number]
+                    image = pdf_page.get_pixmap()
+
+                    # Extract ROIs from the page
+                    extracted_rois = self.extract_rois_from_image(image)
+                    self.text_area.insert(tk.END, f"\nROIs from Page {page_number + 1} in {pdf_file}:\n{extracted_rois}\n")
+
+    def extract_rois_from_image(self, image):
+        # Placeholder function, modify as needed for your ROI extraction logic
+        # Currently, it simply returns the OCR text for the entire image
+        return self.reader.readtext(image)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = PDFROIExtractor(root)
+    root.mainloop()
