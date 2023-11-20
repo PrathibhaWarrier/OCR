@@ -1,0 +1,130 @@
+import os
+import tkinter as tk
+from tkinter import filedialog
+import pdfplumber
+import easyocr
+
+class PDFROIExtractor:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("PDF ROI Extractor")
+
+        # Variables
+        self.pdf_folder_path = ""
+        self.pdf_files = []
+
+        # OCR
+        self.reader = easyocr.Reader(['en'])
+
+        # UI Components
+        self.load_pdf_button = tk.Button(self.master, text="Load PDF Folder", command=self.load_pdf_folder)
+        self.load_pdf_button.pack()
+
+        self.extract_rois_button = tk.Button(self.master, text="Extract ROIs from PDFs", command=self.extract_rois_from_pdfs)
+        self.extract_rois_button.pack()
+
+        # Add a scrolled text widget to display extracted text
+        self.text_area = tk.Text(self.master, wrap=tk.WORD, width=40, height=10)
+        self.text_area.pack()
+
+    def load_pdf_folder(self):
+        self.pdf_folder_path = filedialog.askdirectory(title="Select Folder Containing PDFs")
+        if self.pdf_folder_path:
+            self.pdf_files = [f for f in os.listdir(self.pdf_folder_path) if f.lower().endswith('.pdf')]
+            print(f"PDFs found in the folder: {self.pdf_files}")
+
+    def extract_rois_from_pdfs(self):
+        if not self.pdf_folder_path:
+            print("Select a folder containing PDFs.")
+            return
+
+        self.text_area.delete(1.0, tk.END)  # Clear existing text
+
+        for pdf_file in self.pdf_files:
+            pdf_path = os.path.join(self.pdf_folder_path, pdf_file)
+            self.text_area.insert(tk.END, f"\nProcessing PDF: {pdf_file}\n")
+
+            with pdfplumber.open(pdf_path) as pdf:
+                for page_number, page in enumerate(pdf.pages, start=1):
+                    extracted_text = self.extract_text_from_page(page)
+                    self.text_area.insert(tk.END, f"\nText from Page {page_number} in {pdf_file}:\n{extracted_text}\n")
+
+    def extract_text_from_page(self, page):
+        # Extract text from the entire page using pdfplumber
+        full_text = page.extract_text()
+
+        # Perform OCR on the entire page using easyocr
+        ocr_text = self.reader.readtext(full_text)
+
+        return ocr_text
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = PDFROIExtractor(root)
+    root.mainloop()
+////////////
+
+import os
+import tkinter as tk
+from tkinter import filedialog
+from PIL import Image, ImageTk
+import easyocr
+import fitz  # PyMuPDF
+import openpyxl
+
+class ImageROISelector:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("PDF ROI Extractor")
+
+        # Variables
+        self.pdf_folder_path = ""
+        self.pdf_files = []
+
+        # OCR
+        self.reader = easyocr.Reader(['en'])
+
+        # UI Components
+        self.load_pdf_button = tk.Button(self.master, text="Load PDF Folder", command=self.load_pdf_folder)
+        self.load_pdf_button.pack()
+
+        self.extract_rois_button = tk.Button(self.master, text="Extract ROIs from PDFs", command=self.extract_rois_from_pdfs)
+        self.extract_rois_button.pack()
+
+        # Add a scrolled text widget to display extracted text
+        self.text_area = tk.Text(self.master, wrap=tk.WORD, width=40, height=10)
+        self.text_area.pack()
+
+    def load_pdf_folder(self):
+        self.pdf_folder_path = filedialog.askdirectory(title="Select Folder Containing PDFs")
+        if self.pdf_folder_path:
+            self.pdf_files = [f for f in os.listdir(self.pdf_folder_path) if f.lower().endswith('.pdf')]
+            print(f"PDFs found in the folder: {self.pdf_files}")
+
+    def extract_rois_from_pdfs(self):
+        if not self.pdf_folder_path:
+            print("Select a folder containing PDFs.")
+            return
+
+        self.text_area.delete(1.0, tk.END)  # Clear existing text
+
+        for pdf_file in self.pdf_files:
+            pdf_path = os.path.join(self.pdf_folder_path, pdf_file)
+            self.text_area.insert(tk.END, f"\nProcessing PDF: {pdf_file}\n")
+
+            pdf_document = fitz.open(pdf_path)
+            for page_number in range(pdf_document.page_count):
+                pdf_page = pdf_document[page_number]
+                image = pdf_page.get_pixmap()
+
+                # Perform OCR on the entire page
+                extracted_text = self.reader.readtext(image)
+
+                self.text_area.insert(tk.END, f"\nText from Page {page_number + 1} in {pdf_file}:\n{extracted_text}\n")
+
+            pdf_document.close()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ImageROISelector(root)
+    root.mainloop()
