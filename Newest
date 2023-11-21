@@ -1,0 +1,105 @@
+import fitz  # PyMuPDF
+import tkinter as tk
+from tkinter import filedialog
+
+class PDFViewer:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("PDF ROI Selector")
+
+        self.canvas = tk.Canvas(root)
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        self.load_button = tk.Button(root, text="Load PDF", command=self.load_pdf)
+        self.load_button.pack()
+
+        self.select_roi_button = tk.Button(root, text="Select ROI", command=self.select_roi)
+        self.select_roi_button.pack()
+
+        self.pdf_document = None
+        self.rectangles = []
+
+    def load_pdf(self):
+        file_path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
+        if file_path:
+            self.pdf_document = fitz.open(file_path)
+            self.show_page(0)
+
+    def show_page(self, page_number):
+        page = self.pdf_document[page_number]
+        img = page.get_pixmap()
+        img_width, img_height = img.width, img.height
+
+        self.canvas.config(scrollregion=(0, 0, img_width, img_height))
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=tk.PhotoImage(data=img.tobytes()))
+
+    def select_roi(self):
+        if self.pdf_document:
+            self.canvas.bind("<Button-1>", self.on_click)
+
+    def on_click(self, event):
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        self.draw_rectangle(x, y)
+
+    def draw_rectangle(self, x, y):
+        rectangle_id = self.canvas.create_rectangle(x, y, x + 100, y + 100, outline="red")
+        self.rectangles.append(rectangle_id)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    pdf_viewer = PDFViewer(root)
+    root.mainloop()
+, ......... 
+
+import fitz  # PyMuPDF
+import tkinter as tk
+from tkinter import filedialog
+
+class PDFViewer:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("PDF ROI Selector")
+
+        self.canvas = tk.Canvas(root)
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        self.load_button = tk.Button(root, text="Load PDF", command=self.load_pdf)
+        self.load_button.pack()
+
+        self.select_roi_button = tk.Button(root, text="Select ROI", command=self.select_roi)
+        self.select_roi_button.pack()
+
+        self.pdf_document = None
+        self.rect_id = None
+
+    def load_pdf(self):
+        file_path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
+        if file_path:
+            self.pdf_document = fitz.open(file_path)
+            self.show_page(0)
+
+    def show_page(self, page_number):
+        page = self.pdf_document[page_number]
+        img = page.get_pixmap()
+        img_width, img_height = img.width, img.height
+
+        self.canvas.config(scrollregion=(0, 0, img_width, img_height))
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=tk.PhotoImage(data=img.tobytes()))
+
+    def select_roi(self):
+        if self.pdf_document:
+            self.canvas.bind("<Button-1>", self.on_click)
+
+    def on_click(self, event):
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        self.draw_rectangle(x, y)
+
+    def draw_rectangle(self, x, y):
+        if self.rect_id:
+            self.canvas.delete(self.rect_id)
+        self.rect_id = self.canvas.create_rectangle(x, y, x + 100, y + 100, outline="red")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    pdf_viewer = PDFViewer(root)
+    root.mainloop()
