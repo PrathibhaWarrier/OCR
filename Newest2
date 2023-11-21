@@ -1,0 +1,70 @@
+import fitz  # PyMuPDF
+import tkinter as tk
+from tkinter import filedialog
+
+class PDFViewer:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("PDF ROI Extractor")
+
+        self.canvas = tk.Canvas(root)
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        self.load_button = tk.Button(root, text="Load PDF", command=self.load_pdf)
+        self.load_button.pack()
+
+        self.select_roi_button = tk.Button(root, text="Select ROI", command=self.select_roi)
+        self.select_roi_button.pack()
+
+        self.extract_button = tk.Button(root, text="Extract OCR", command=self.extract_ocr)
+        self.extract_button.pack()
+
+        self.text_box = tk.Text(root, wrap=tk.WORD, height=10, width=40)
+        self.text_box.pack()
+
+        self.pdf_document = None
+        self.rectangles = []
+
+    def load_pdf(self):
+        file_path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
+        if file_path:
+            self.pdf_document = fitz.open(file_path)
+            self.show_page(0)
+
+    def show_page(self, page_number):
+        page = self.pdf_document[page_number]
+        img = page.get_pixmap()
+        img_width, img_height = img.width, img.height
+
+        self.canvas.config(scrollregion=(0, 0, img_width, img_height))
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=tk.PhotoImage(data=img.tobytes()))
+
+    def select_roi(self):
+        if self.pdf_document:
+            self.canvas.bind("<Button-1>", self.on_click)
+
+    def on_click(self, event):
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        self.draw_rectangle(x, y)
+
+    def draw_rectangle(self, x, y):
+        rectangle_id = self.canvas.create_rectangle(x, y, x + 100, y + 100, outline="red")
+        self.rectangles.append((rectangle_id, (x, y, x + 100, y + 100)))
+
+    def extract_ocr(self):
+        if self.pdf_document and self.rectangles:
+            extracted_text = ""
+            for _, (x, y, x1, y1) in self.rectangles:
+                page_number = 0  # You can adjust the page number as needed
+                page = self.pdf_document[page_number]
+                region = fitz.Rect(x, y, x1, y1)
+                text = page.get_text("text", clip=region)
+                extracted_text += f"ROI Text:\n{text}\n\n"
+
+            self.text_box.delete(1.0, tk.END)  # Clear previous text
+            self.text_box.insert(tk.END, extracted_text)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    pdf_viewer = PDFViewer(root)
+    root.mainloop()
