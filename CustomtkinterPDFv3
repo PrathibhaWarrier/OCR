@@ -1,0 +1,151 @@
+import os
+import fitz
+from tkinter import *
+from tkinter import filedialog
+from PIL import Image, ImageTk
+from openpyxl import Workbook
+
+class PDFViewer:
+    def __init__(self, master):
+        self.master = master
+        self.master.geometry('1000x700')
+        self.doc = None
+        self.num_pages = 0
+        self.selected_rois = []
+        self.current_roi = None
+
+        self.scrollbar = Scrollbar(master)
+        self.scrollbar.pack(side=RIGHT, fill=Y)
+
+        self.canvas = Canvas(master, yscrollcommand=self.scrollbar.set)
+        self.canvas.pack(side=LEFT, fill=BOTH, expand=1)
+
+        self.label = Label(master, text="Enter page number to display:")
+        self.label.pack(side=TOP, fill=None)
+
+        self.entry = Entry(master)
+        self.entry.pack(side=TOP, fill=BOTH)
+        self.entry.insert(0, '1')
+
+        self.button_show = Button(master, text="Show Page", command=self.show_image)
+        self.button_show.pack(side=TOP, fill=None)
+
+        self.scrollbar.config(command=self.canvas.yview)
+
+        self.text_area = Text(master, height=20, width=30)
+        self.text_area.pack(side=RIGHT, padx=10, pady=10)
+
+        # Bind mouse events to the canvas
+        self.canvas.bind("<ButtonPress-1>", self.on_mouse_press)
+        self.canvas.bind("<B1-Motion>", self.on_mouse_drag)
+        self.canvas.bind("<ButtonRelease-1>", self.on_mouse_release)
+
+    def open_pdf(self, file_path):
+        try:
+            self.doc = fitz.open(file_path)
+            self.num_pages = len(self.doc)
+            self.show_image()
+        except Exception as e:
+            print(f"Error opening PDF: {e}")
+
+    def pdf_to_img(self, page_num):
+        page = self.doc.load_page(page_num)
+        pix = page.get_pixmap(matrix=fitz.Matrix(1, 1))
+        return Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
+    def show_image(self):
+        try:
+            page_num = int(self.entry.get()) - 1
+            assert 0 <= page_num < self.num_pages
+
+            im = self.pdf_to_img(page_num)
+            img_tk = ImageTk.PhotoImage(im)
+
+            self.canvas.config(scrollregion=(0, 0, im.width, im.height))
+
+            frame = Frame(self.canvas)
+            panel = Label(frame, image=img_tk)
+            panel.pack(side="bottom", fill="both", expand="yes")
+
+            frame.image = img_tk
+            self.canvas.create_window(0, 0, anchor='nw', window=frame)
+            frame.update_idletasks()
+            self.canvas.config(scrollregion=self.canvas.bbox("all"))
+
+        except (ValueError, AssertionError):
+            pass
+
+    def on_mouse_press(self, event):
+        x1, y1 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        self.current_roi = {'x1': x1, 'y1': y1, 'x2': x1, 'y2': y1}
+        self.selected_rois.append(self.current_roi)
+
+    def on_mouse_drag(self, event):
+        if self.current_roi:
+            x2, y2 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+            self.current_roi['x2'], self.current_roi['y2'] = x2, y2
+            self.update_roi_display()
+
+    def on_mouse_release(self, event):
+        self.current_roi = None
+
+    def update_roi_display(self):
+        self.canvas.delete("roi")  # Remove previous rectangles
+        for roi in self.selected_rois:
+            x1, y1, x2, y2 = roi['x1'], roi['y1'], roi['x2'], roi['y2']
+            self.canvas.create_rectangle(x1, y1, x2, y2, outline="red", tags="roi")
+
+    def display_text_data(self):
+        self.text_area.delete(1.0, END)  # Clear previous text
+        for roi in self.selected_rois:
+            x1, y1, x2, y2 = roi['x1'], roi['y1'], roi['x2'], roi['y2']
+            text_data = self.extract_text_from_roi(x1, y1, x2, y2)
+            self.text_area.insert(END, f"ROI: ({x1},{y1}) to ({x2},{y2})\n")
+            self.text_area.insert(END, f"Text Data:\n{text_data}\n\n")
+
+    def extract_text_from_roi(self, x1, y1, x2, y2):
+        # Extract text from the specified region
+        page_num = int(self.entry.get()) - 1
+        page = self.doc.load_page(page_num)
+        rect = fitz.Rect(x1, y1, x2, y2)
+        text_data = page.get_text("text", clip=rect)
+        return text_data
+
+    def convert_pdfs_and_extract_data(self, folder_path):
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                if file.endswith(".pdf"):
+                    pdf_path = os.path.join(root, file)
+                    self.open_pdf(pdf_path)
+                    self.display_text_data()
+                    self.save_data_to_excel(pdf_path)
+
+    def save_data_to_excel(self, pdf_path):
+        # Create a new Excel workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["ROI", "Text Data"])
+
+        for roi in self.selected_rois:
+            x1, y1, x2, y2 = roi['x1'], roi['y1'], roi['x2'], roi['y2']
+            text_data = self.extract_text_from_roi(x1, y1, x2, y2)
+            ws.append([f"({x1},{y1}) to ({x2},{y2})", text_data])
+
+        # Save the workbook with a filename based on the PDF file
+        excel_filename = os.path.splitext(os.path.basename(pdf_path))[0] + "_data.xlsx"
+        wb.save(excel_filename)
+
+if __name__ == "__main__":
+    root = Tk()
+    pdf_viewer = PDFViewer(root)
+
+    browse_button = Button(root, text="Browse PDF", command=lambda: browse_pdf(pdf_viewer))
+    browse_button.pack(side=TOP, fill=None)
+
+    display_button = Button(root, text="Display Text Data", command=pdf_viewer.display_text_data)
+    display_button.pack(side=TOP, fill=None)
+
+    convert_button = Button(root, text="Convert and Extract Data", command=lambda: browse_folder(pdf_viewer))
+    convert_button.pack(side=TOP, fill=None)
+
+   
