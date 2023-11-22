@@ -1,0 +1,61 @@
+import fitz
+from tkinter import *
+from PIL import Image, ImageTk
+
+class CustomPDFViewer:
+    def __init__(self, master, file_name):
+        self.doc = fitz.open(file_name)
+        self.num_pages = len(self.doc)
+
+        self.master = master
+        self.master.geometry('750x700')
+
+        self.scrollbar = Scrollbar(master)
+        self.scrollbar.pack(side=RIGHT, fill=Y)
+
+        self.canvas = Canvas(master, yscrollcommand=self.scrollbar.set)
+        self.canvas.pack(side=LEFT, fill=BOTH, expand=1)
+
+        self.label = Label(master, text="Enter page number to display:")
+        self.label.pack(side=TOP, fill=None)
+
+        self.entry = Entry(master)
+        self.entry.pack(side=TOP, fill=BOTH)
+        self.entry.insert(0, '1')
+
+        self.button = Button(master, text="Show Page", command=self.show_image)
+        self.button.pack(side=TOP, fill=None)
+
+        self.scrollbar.config(command=self.canvas.yview)
+        self.show_image()
+
+    def pdf_to_img(self, page_num):
+        page = self.doc.load_page(page_num)
+        pix = page.get_pixmap(matrix=fitz.Matrix(1, 1))
+        return Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
+    def show_image(self):
+        try:
+            page_num = int(self.entry.get()) - 1
+            assert 0 <= page_num < self.num_pages
+
+            im = self.pdf_to_img(page_num)
+            img_tk = ImageTk.PhotoImage(im)
+
+            frame = Frame(self.canvas)
+            panel = Label(frame, image=img_tk)
+            panel.pack(side="bottom", fill="both", expand="yes")
+
+            frame.image = img_tk
+            self.canvas.create_window(0, 0, anchor='nw', window=frame)
+            frame.update_idletasks()
+            self.canvas.config(scrollregion=self.canvas.bbox("all"))
+
+        except (ValueError, AssertionError):
+            pass
+
+if __name__ == "__main__":
+    root = Tk()
+    pdf_viewer = CustomPDFViewer(root, file_name="sample_pdf.pdf")
+    root.mainloop()
+    pdf_viewer.doc.close()
