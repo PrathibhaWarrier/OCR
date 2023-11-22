@@ -1,0 +1,79 @@
+import fitz
+from tkinter import *
+from tkinter import filedialog
+from PIL import Image, ImageTk
+
+class PDFViewer:
+    def __init__(self, master):
+        self.master = master
+        self.master.geometry('750x700')
+        self.doc = None
+        self.num_pages = 0
+
+        self.scrollbar = Scrollbar(master)
+        self.scrollbar.pack(side=RIGHT, fill=Y)
+
+        self.canvas = Canvas(master, yscrollcommand=self.scrollbar.set)
+        self.canvas.pack(side=LEFT, fill=BOTH, expand=1)
+
+        self.label = Label(master, text="Enter page number to display:")
+        self.label.pack(side=TOP, fill=None)
+
+        self.entry = Entry(master)
+        self.entry.pack(side=TOP, fill=BOTH)
+        self.entry.insert(0, '1')
+
+        self.button = Button(master, text="Show Page", command=self.show_image)
+        self.button.pack(side=TOP, fill=None)
+
+        self.scrollbar.config(command=self.canvas.yview)
+
+    def open_pdf(self, file_path):
+        try:
+            self.doc = fitz.open(file_path)
+            self.num_pages = len(self.doc)
+            self.show_image()
+        except Exception as e:
+            print(f"Error opening PDF: {e}")
+
+    def pdf_to_img(self, page_num):
+        page = self.doc.load_page(page_num)
+        pix = page.get_pixmap(matrix=fitz.Matrix(1, 1))
+        return Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
+    def show_image(self):
+        try:
+            page_num = int(self.entry.get()) - 1
+            assert 0 <= page_num < self.num_pages
+
+            im = self.pdf_to_img(page_num)
+            img_tk = ImageTk.PhotoImage(im)
+
+            frame = Frame(self.canvas)
+            panel = Label(frame, image=img_tk)
+            panel.pack(side="bottom", fill="both", expand="yes")
+
+            frame.image = img_tk
+            self.canvas.create_window(0, 0, anchor='nw', window=frame)
+            frame.update_idletasks()
+            self.canvas.config(scrollregion=self.canvas.bbox("all"))
+
+        except (ValueError, AssertionError):
+            pass
+
+def browse_pdf(viewer):
+    file_path = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
+    if file_path:
+        viewer.open_pdf(file_path)
+
+if __name__ == "__main__":
+    root = Tk()
+    pdf_viewer = PDFViewer(root)
+
+    browse_button = Button(root, text="Browse PDF", command=lambda: browse_pdf(pdf_viewer))
+    browse_button.pack(side=TOP, fill=None)
+
+    root.mainloop()
+
+    if pdf_viewer.doc:
+        pdf_viewer.doc.close()
