@@ -1,0 +1,164 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Nov 16 17:45:53 2023
+
+@author: PRATHIBHA
+"""
+
+import os
+import tkinter as tk
+from tkinter import filedialog
+from PIL import Image, ImageTk
+import easyocr
+import numpy as np
+import cv2
+import openpyxl
+
+class ImageROISelector:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Image ROI Selector")
+
+        # Variables
+        self.image_path = ""
+        self.image = None
+        self.roi_list = []
+        self.start_x = None
+        self.start_y = None
+        self.rect_id = None
+
+        # OCR
+        self.reader = easyocr.Reader(['en'])
+
+        # UI Components
+        self.canvas = tk.Canvas(self.master)
+        self.canvas.pack(expand=tk.YES, fill=tk.BOTH)
+        self.canvas.bind("<Button-1>", self.on_press)
+        self.canvas.bind("<B1-Motion>", self.on_drag)
+        self.canvas.bind("<ButtonRelease-1>", self.on_release)
+
+        self.load_button = tk.Button(self.master, text="Load Image", command=self.load_image)
+        self.load_button.pack()
+
+        self.save_button = tk.Button(self.master, text="Save ROIs", command=self.save_rois)
+        self.save_button.pack()
+
+        self.extract_text_button = tk.Button(self.master, text="Extract Text", command=self.extract_text)
+        self.extract_text_button.pack()
+
+        self.extract_all_button = tk.Button(self.master, text="Extract All Texts", command=self.extract_all_texts)
+        self.extract_all_button.pack()
+
+        # Add a scrolled text widget to display extracted text
+        self.text_area = tk.Text(self.master, wrap=tk.WORD, width=40, height=10)
+        self.text_area.pack()
+
+    def load_image(self):
+        self.image_path = filedialog.askopenfilename(title="Select Image File",
+                                                      filetypes=[("Image files", "*.png;*.jpg;*.jpeg;*.gif;*.bmp")])
+        if self.image_path:
+            self.image = Image.open(self.image_path)
+            self.display_image()
+
+    def display_image(self):
+        self.roi_list = []  # Clear existing ROIs
+        self.photo = ImageTk.PhotoImage(self.image)
+        self.canvas.config(width=self.photo.width(), height=self.photo.height())
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo)
+
+    def on_press(self, event):
+        self.start_x = self.canvas.canvasx(event.x)
+        self.start_y = self.canvas.canvasy(event.y)
+        self.rect_id = self.canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, outline="red")
+
+    def on_drag(self, event):
+        cur_x = self.canvas.canvasx(event.x)
+        cur_y = self.canvas.canvasy(event.y)
+        self.canvas.coords(self.rect_id, self.start_x, self.start_y, cur_x, cur_y)
+
+    def on_release(self, event):
+        end_x = self.canvas.canvasx(event.x)
+        end_y = self.canvas.canvasy(event.y)
+        roi = (self.start_x, self.start_y, end_x, end_y)
+        self.roi_list.append(roi)
+
+    def save_rois(self):
+        if self.roi_list:
+            with open("rois.txt", "w") as file:
+                for roi in self.roi_list:
+                    file.write(f"{roi}\n")
+            print("ROIs saved to rois.txt")
+        else:
+            print("No ROIs to save.")
+
+    def extract_text(self):
+        if self.image and self.roi_list:
+            extracted_text = ""
+            for roi in self.roi_list:
+                roi_image = self.image.crop(roi)
+                roi_image_np = np.array(roi_image)
+
+                if len(roi_image_np.shape) > 2:
+                    roi_image_grey = cv2.cvtColor(roi_image_np, cv2.COLOR_BGR2GRAY)
+                else:
+                    roi_image_grey = roi_image_np
+
+                text = self.reader.readtext(roi_image_grey)
+                extracted_text += f"Text in ROI {roi}: {text}\n"
+
+            self.text_area.delete(1.0, tk.END)  # Clear existing text
+            self.text_area.insert(tk.END, extracted_text)
+        else:
+            print("Load an image and define ROIs before extracting text.")
+
+    def extract_all_texts(self):
+        folder_path = filedialog.askdirectory(title="Select Folder Containing Images")
+        if folder_path:
+            self.text_area.delete(1.0, tk.END)  # Clear existing text
+            image_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp'))]
+
+            if not image_files:
+                print("No image files found in the selected folder.")
+                return
+
+            extracted_data = []
+
+            for image_file in image_files:
+                image_path = os.path.join(folder_path, image_file)
+                image = Image.open(image_path)
+                extracted_text = ""
+
+                for roi in self.roi_list:
+                    roi_image = image.crop(roi)
+                    roi_image_np = np.array(roi_image)
+
+                    if len(roi_image_np.shape) > 2:
+                        roi_image_grey = cv2.cvtColor(roi_image_np, cv2.COLOR_BGR2GRAY)
+                    else:
+                        roi_image_grey = roi_image_np
+
+                    text = self.reader.readtext(roi_image_grey)
+                    extracted_text += f"Text in ROI {roi} of {image_file}: {text}\n"
+
+                extracted_data.append(extracted_text)
+
+            # Save the extracted data to an Excel file
+            self.save_to_excel(extracted_data)
+
+    def save_to_excel(self, extracted_data):
+        excel_file_path = "extracted_data.xlsx"
+
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
+        worksheet.title = "OCR Data"
+
+        for idx, data in enumerate(extracted_data, start=1):
+            worksheet.cell(row=idx, column=1, value=data)
+
+        workbook.save(excel_file_path)
+        print(f"OCR data saved to {excel_file_path}")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ImageROISelector(root)
+    root.mainloop()
