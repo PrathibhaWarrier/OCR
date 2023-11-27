@@ -1,0 +1,48 @@
+import os
+import fitz  # PyMuPDF
+from tkinter import Tk, filedialog, Button, Label
+
+class PDFConverterApp:
+    def __init__(self, master):
+        self.master = master
+        master.title("PDF to Image Converter")
+
+        self.folder_path = None
+
+        self.label = Label(master, text="Select a folder containing PDFs")
+        self.label.pack()
+
+        self.select_button = Button(master, text="Select Folder", command=self.select_folder)
+        self.select_button.pack()
+
+        self.convert_button = Button(master, text="Convert to Images", command=self.convert_to_images)
+        self.convert_button.pack()
+
+    def select_folder(self):
+        self.folder_path = filedialog.askdirectory()
+        self.label.config(text=f"Selected Folder: {self.folder_path}")
+
+    def convert_to_images(self):
+        if self.folder_path is None:
+            self.label.config(text="Please select a folder first.")
+            return
+
+        for filename in os.listdir(self.folder_path):
+            if filename.endswith(".pdf"):
+                pdf_path = os.path.join(self.folder_path, filename)
+
+                pdf_document = fitz.open(pdf_path)
+                for page_number in range(pdf_document.page_count):
+                    page = pdf_document[page_number]
+                    image = page.get_pixmap()
+                    image.save(os.path.join(self.folder_path, f"{os.path.splitext(filename)[0]}_page_{page_number + 1}.png"))
+
+                pdf_document.close()
+
+        self.label.config(text="Conversion completed.")
+
+if __name__ == "__main__":
+    root = Tk()
+    app = PDFConverterApp(root)
+    root.mainloop()
+
