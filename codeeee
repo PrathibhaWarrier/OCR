@@ -1,0 +1,52 @@
+import customtkinter as ctk
+import os
+import openpyxl
+from tkinter import filedialog
+import easyocr
+import cv2
+from PIL import Image, ImageTk
+import numpy as np
+
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("blue")
+
+class OCRApp:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("OCR Application")
+
+        # Create a notebook for tabs
+        self.notebook = ctk.CTkNotebook(master)
+        self.notebook.pack(expand=True, fill='both')
+
+        # Tab 1
+        self.tab1 = ctk.CTkFrame(self.notebook)
+        self.notebook.add(self.tab1, text='Tab 1')
+
+        # ... (rest of your existing code for the first tab)
+
+        # Tab 2
+        self.tab2 = ctk.CTkFrame(self.notebook)
+        self.notebook.add(self.tab2, text='OCR Tab')
+
+        # Add widgets specific to the second tab
+        self.label_tab2 = ctk.CTkLabel(self.tab2, text="OCR Tab")
+        self.label_tab2.pack(padx=10, pady=10)
+
+        # Include the OCR code in the second tab
+        self.setup_ocr_tab()
+
+    def setup_ocr_tab(self):
+        self.entry_ocr = ctk.CTkEntry(self.tab2, placeholder_text="CTkEntry")
+        self.entry_ocr.pack(pady=10)
+
+        button_ocr = ctk.CTkButton(self.tab2, text="Run OCR", command=self.run_ocr)
+        button_ocr.pack(pady=10)
+
+    def run_ocr(self):
+        # Include your OCR code here using self.entry_ocr.get() to get the input
+
+if __name__ == "__main__":
+    root = ctk.CTk()
+    app = OCRApp(root)
+    root.mainloop()
