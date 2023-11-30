@@ -1,0 +1,260 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Nov 27 17:02:26 2023
+
+@author: X1PRATWA
+"""
+
+import customtkinter as ctk
+# import tkinter
+# from tkinter import ttk
+# from tkinter import messagebox
+import os
+import openpyxl
+# import importlib
+from tkinter import filedialog
+import easyocr
+import cv2
+# import os
+import fitz  # PyMuPDF
+import tkinter as tk
+# from tkinter import filedialog
+from PIL import Image, ImageTk
+# import easyocr
+import numpy as np
+# import cv2
+# import openpyxl
+
+ 
+ctk.set_appearance_mode("Dark")
+
+# Supported themes : green, dark-blue, blue
+ctk.set_default_color_theme("blue")
+
+appWidth, appHeight = 1920 , 1080
+# 124, 800
+
+
+# Creating the GUI window.
+window = ctk.CTk()
+
+
+
+class ImageROISelector:
+    def __init__(self, master):
+        self.main_frame = ctk.CTkFrame(master)
+        # main_frame.pack(expand=1)
+
+        # Create A Canvas
+        self.my_canvas = ctk.CTkCanvas(self.main_frame)
+        # self.master = master
+        # self.master.title("Image ROI Selector")
+
+        # Variables
+        self.image_path = ""
+        self.image = None
+        self.roi_list = []
+        self.start_x = None
+        self.start_y = None
+        self.rect_id = None
+
+        # OCR
+        self.reader = easyocr.Reader(['en'])
+
+        # UI Components
+        self.canvas = ctk.CTkCanvas(master)
+        self.canvas.pack(expand='yes', fill='both')
+        self.canvas.bind("<Button-1>", self.on_press)
+        self.canvas.bind("<B1-Motion>", self.on_drag)
+        self.canvas.bind("<ButtonRelease-1>", self.on_release)
+        self.canvas.grid(row=0, column=0, rowspan=5, sticky=ctk.NSEW)
+
+        self.load_button = ctk.CTkButton(master, text="Load Image", command=self.load_image, width=15, height=2)
+        self.load_button.grid(row=0, column=1, sticky=tk.W, pady=5)
+
+        self.save_button = ctk.CTkButton(master, text="Save ROIs", command=self.save_rois, width=15, height=2)
+        self.save_button.grid(row=1, column=1, sticky=tk.W, pady=5)
+
+        self.extract_text_button = ctk.CTkButton(master, text="Extract Text", command=self.extract_text, width=15, height=2)
+        self.extract_text_button.grid(row=2, column=1, sticky=tk.W, pady=5)
+
+        self.extract_all_button = ctk.CTkButton(master, text="Extract All Texts", command=self.extract_all_texts, width=15, height=2)
+        self.extract_all_button.grid(row=3, column=1, sticky=tk.W, pady=5)
+
+        # Add a scrolled text widget to display extracted text
+        self.text_area = ctk.CTkTextbox(master, wrap=tk.WORD, width=40, height=10)
+        self.text_area.grid(row=4, column=1, sticky=tk.W, pady=5)
+
+        # Configure row and column weights to allow resizing
+        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(0, weight=1)
+
+        # Configure column weight for the canvas
+        self.main_frame.grid_columnconfigure(1, weight=0)
+        
+        self.folder_path = None
+
+        self.label = ctk.CTkLabel(master, text="Select a folder containing PDFs", width=15, height=2)
+        self.label.grid(row=5, column=1, sticky=tk.W, pady=5)
+
+        self.select_button = ctk.CTkButton(master, text="Select Folder", command=self.select_folder, width=15, height=2)
+        self.select_button.grid(row=6, column=1, sticky=tk.W, pady=5)
+        
+        self.convert_button = ctk.CTkButton(master, text="Convert to Images", command=self.convert_to_images, width=15, height=2)
+        self.convert_button.grid(row=7, column=1, sticky=tk.W, pady=5)
+
+    def select_folder(self):
+        self.folder_path = filedialog.askdirectory()
+        self.label.config(text=f"Selected Folder: {self.folder_path}")
+
+    def convert_to_images(self):
+        if self.folder_path is None:
+            self.label.config(text="Please select a folder first.")
+            return
+
+        for filename in os.listdir(self.folder_path):
+            if filename.endswith(".pdf"):
+                pdf_path = os.path.join(self.folder_path, filename)
+
+                pdf_document = fitz.open(pdf_path)
+                for page_number in range(pdf_document.page_count):
+                    page = pdf_document[page_number]
+                    image = page.get_pixmap()
+                    image.save(os.path.join(self.folder_path, f"{os.path.splitext(filename)[0]}_page_{page_number + 1}.png"))
+
+                pdf_document.close()
+
+        self.label.config(text="Conversion completed.")
+
+    def load_image(self):
+        self.image_path = filedialog.askopenfilename(title="Select Image File",
+                                                      filetypes=[("Image files", "*.png;*.jpg;*.jpeg;*.gif;*.bmp")])
+        if self.image_path:
+            self.image = Image.open(self.image_path)
+            self.display_image()
+
+    def display_image(self):
+        self.roi_list = []  # Clear existing ROIs
+        self.photo = ctk.CTkImage(self.image)
+        # self.photo = ImageTk.PhotoImage(self.image)
+        self.label = ctk.CTkLabel(window, image=self.photo)
+        self.label.image=self.photo 
+        # self.canvas.config(width=self.photo.width(), height=self.photo.height())
+        # self.canvas.create_image(0, 0, image=self.photo)
+        
+#         im = Image.open(pathToImage)
+# ph = ImageTk.PhotoImage(im)
+
+# label = Label(window, image=ph)
+# label.image=ph 
+
+        
+        # self.roi_list = []  # Clear existing ROIs
+        # self.photo = ctk.CTkImage(self.image)
+        # # CTkImage(Image.open(self.image), size=(26, 26))
+        # # ImageTk.PhotoImage(self.image)
+        # # self.canvas.config(width=self.photo.width(), height=self.photo.height())
+        # self.canvas.create_image(master=root, image=self.photo)
+        
+        # self.button_image = ctk.CTkImage(Image.open(self.image), size=(26, 26))
+    
+        # self.image_button = ctk.CTkButton(master=root, text="Text will be gone ",image=self.button_image)
+        # self.image_button.pack()
+
+    def on_press(self, event):
+        self.start_x = self.canvas.canvasx(event.x)
+        self.start_y = self.canvas.canvasy(event.y)
+        self.rect_id = self.canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, outline="red")
+
+    def on_drag(self, event):
+        cur_x = self.canvas.canvasx(event.x)
+        cur_y = self.canvas.canvasy(event.y)
+        self.canvas.coords(self.rect_id, self.start_x, self.start_y, cur_x, cur_y)
+
+    def on_release(self, event):
+        end_x = self.canvas.canvasx(event.x)
+        end_y = self.canvas.canvasy(event.y)
+        roi = (self.start_x, self.start_y, end_x, end_y)
+        self.roi_list.append(roi)
+
+    def save_rois(self):
+        if self.roi_list:
+            with open("rois.txt", "w") as file:
+                for roi in self.roi_list:
+                    file.write(f"{roi}\n")
+            print("ROIs saved to rois.txt")
+        else:
+            print("No ROIs to save.")
+
+    def extract_text(self):
+        if self.image and self.roi_list:
+            extracted_text = ""
+            for roi in self.roi_list:
+                roi_image = self.image.crop(roi)
+                roi_image_np = np.array(roi_image)
+
+                if len(roi_image_np.shape) > 2:
+                    roi_image_grey = cv2.cvtColor(roi_image_np, cv2.COLOR_BGR2GRAY)
+                else:
+                    roi_image_grey = roi_image_np
+
+                text = self.reader.readtext(roi_image_grey)
+                extracted_text += f"Text in ROI {roi}: {text}\n"
+
+            self.text_area.delete(1.0, tk.END)  # Clear existing text
+            self.text_area.insert(tk.END, extracted_text)
+        else:
+            print("Load an image and define ROIs before extracting text.")
+
+    def extract_all_texts(self):
+        folder_path = filedialog.askdirectory(title="Select Folder Containing Images")
+        if folder_path:
+            self.text_area.delete(1.0, tk.END)  # Clear existing text
+            image_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp'))]
+
+            if not image_files:
+                print("No image files found in the selected folder.")
+                return
+
+            extracted_data = []
+
+            for image_file in image_files:
+                image_path = os.path.join(folder_path, image_file)
+                image = Image.open(image_path)
+                extracted_text = ""
+
+                for roi in self.roi_list:
+                    roi_image = image.crop(roi)
+                    roi_image_np = np.array(roi_image)
+
+                    if len(roi_image_np.shape) > 2:
+                        roi_image_grey = cv2.cvtColor(roi_image_np, cv2.COLOR_BGR2GRAY)
+                    else:
+                        roi_image_grey = roi_image_np
+
+                    text = self.reader.readtext(roi_image_grey)
+                    extracted_text += f"Text in ROI {roi} of {image_file}: {text}\n"
+
+                extracted_data.append(extracted_text)
+
+            # Save the extracted data to an Excel file
+            self.save_to_excel(extracted_data)
+
+    def save_to_excel(self, extracted_data):
+        excel_file_path = "extracted_data.xlsx"
+
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
+        worksheet.title = "OCR Data"
+
+        for idx, data in enumerate(extracted_data, start=1):
+            worksheet.cell(row=idx, column=1, value=data)
+
+        workbook.save(excel_file_path)
+        print(f"OCR data saved to {excel_file_path}")
+
+
+if __name__ == "__main__":
+    root = ctk.CTk()
+    app = ImageROISelector(root)
+    root.mainloop()
