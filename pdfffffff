@@ -1,0 +1,98 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Dec  1 10:50:41 2023
+
+@author: PRATHIBHA
+"""
+
+import os
+import tkinter as tk
+from tkinter import filedialog, ttk
+from PIL import Image, ImageTk
+import easyocr
+import numpy as np
+import cv2
+import openpyxl
+
+class ImageROISelector:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Image ROI Selector")
+
+        # Variables
+        self.image_path = ""
+        self.image = None
+        self.roi_list = []
+        self.start_x = None
+        self.start_y = None
+        self.rect_id = None
+
+        # OCR
+        self.reader = easyocr.Reader(['en'])
+
+        # Create a notebook (tabs container)
+        self.notebook = ttk.Notebook(self.master)
+
+        # Create tabs
+        self.tab_select = ttk.Frame(self.notebook)
+        self.tab_edit = ttk.Frame(self.notebook)
+
+        # Add tabs to the notebook
+        self.notebook.add(self.tab_select, text='Select ROI')
+        self.notebook.add(self.tab_edit, text='Edit ROIs')
+
+        # Set notebook size and position
+        self.notebook.grid(row=0, column=0, rowspan=5, sticky=tk.NSEW)
+
+        # UI Components for the "Select ROI" tab
+        self.load_button_select = tk.Button(self.tab_select, text="Load Image", command=self.load_image_select, width=15, height=2, font=("Helvetica", 12), fg="white", bg="black")
+        self.load_button_select.grid(row=0, column=0, sticky=tk.W, pady=5)
+
+        # UI Components for the "Edit ROIs" tab
+        self.load_button_edit = tk.Button(self.tab_edit, text="Load Image", command=self.load_image_edit, width=15, height=2, font=("Helvetica", 12), fg="white", bg="black")
+        self.load_button_edit.grid(row=0, column=0, sticky=tk.W, pady=5)
+
+        self.save_button = tk.Button(self.tab_edit, text="Save ROIs", command=self.save_rois, width=15, height=2, font=("Helvetica", 12), fg="white", bg="black")
+        self.save_button.grid(row=1, column=0, sticky=tk.W, pady=5)
+
+        self.extract_text_button = tk.Button(self.tab_edit, text="Extract Text", command=self.extract_text, width=15, height=2, font=("Helvetica", 12), fg="white", bg="black")
+        self.extract_text_button.grid(row=2, column=0, sticky=tk.W, pady=5)
+
+        self.extract_all_button = tk.Button(self.tab_edit, text="Extract All Texts", command=self.extract_all_texts, width=15, height=2, font=("Helvetica", 12), fg="white", bg="black")
+        self.extract_all_button.grid(row=3, column=0, sticky=tk.W, pady=5)
+
+        # Add a scrolled text widget to display extracted text
+        self.text_area = tk.Text(self.tab_edit, wrap=tk.WORD, width=40, height=10)
+        self.text_area.grid(row=4, column=0, sticky=tk.W, pady=5)
+
+        # Configure row and column weights to allow resizing
+        self.master.grid_rowconfigure(0, weight=1)
+        self.master.grid_columnconfigure(0, weight=1)
+
+        # Configure column weight for the notebook
+        self.master.grid_columnconfigure(1, weight=1)
+
+        # Configure row weight for the tabs
+        self.tab_select.grid_rowconfigure(0, weight=1)
+        self.tab_edit.grid_rowconfigure(0, weight=1)
+
+    def load_image_select(self):
+        self.image_path = filedialog.askopenfilename(title="Select Image File",
+                                                      filetypes=[("Image files", "*.png;*.jpg;*.jpeg;*.gif;*.bmp")])
+        if self.image_path:
+            self.image = Image.open(self.image_path)
+            self.display_image()
+
+    def load_image_edit(self):
+        self.image_path = filedialog.askopenfilename(title="Select Image File",
+                                                      filetypes=[("Image files", "*.png;*.jpg;*.jpeg;*.gif;*.bmp")])
+        if self.image_path:
+            self.image = Image.open(self.image_path)
+            self.display_image()
+
+    # ... (Rest of your existing code remains unchanged)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ImageROISelector(root)
+    root.mainloop()
