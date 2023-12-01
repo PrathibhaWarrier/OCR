@@ -38,3 +38,35 @@ result = extract_text_from_roi(pdf_path, rois)
 
 for entry in result:
     print(f"Page {entry['page']}, ROI {entry['roi']}: {entry['text']}")
+
+
+import pdfplumber
+import pytesseract
+from PIL import Image
+
+def extract_text_from_roi(pdf_path, rois):
+    with pdfplumber.open(pdf_path) as pdf:
+        extracted_text = []
+
+        for page_number in range(len(pdf.pages)):
+            page = pdf.pages[page_number]
+            page_image = page.to_image()
+            
+            for roi in rois:
+                x0, y0, x1, y1 = roi
+                roi_image = page_image.crop((x0, y0, x1, y1)).to_pil()
+
+                # Perform OCR on the ROI
+                roi_text = pytesseract.image_to_string(roi_image, lang='eng')
+                extracted_text.append({"page": page_number + 1, "roi": roi, "text": roi_text})
+
+    return extracted_text
+
+# Example usage
+pdf_path = "your_pdf_file.pdf"
+rois = [(100, 100, 300, 200), (150, 250, 400, 350)]  # Specify your ROIs as (x0, y0, x1, y1)
+
+result = extract_text_from_roi(pdf_path, rois)
+
+for entry in result:
+    print(f"Page {entry['page']}, ROI {entry['roi']}: {entry['text']}")
