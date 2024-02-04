@@ -39,3 +39,36 @@ result_df['PlantCountry'] = df['PlantCountry']
 # Save the result DataFrame to a new Excel file
 result_df.to_excel('result_excel_file.xlsx', index=False)
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+from powerbiclient import Report, models
+
+# Replace with your Power BI Desktop file path
+pbix_file_path = 'path/to/your/file.pbix'
+
+# Connect to the Power BI Desktop file
+report = Report(pbix_file_path)
+
+# Specify the tables and columns you want to fetch
+table_columns_mapping = {
+    'DIM_Plant': ['Column1', 'Column2', 'Column3'],  # Replace with actual column names
+    'DIM_PlantMaterial': ['ColumnA', 'ColumnB', 'ColumnC']  # Replace with actual column names
+}
+
+# Fetch data from each specified table and selected columns
+for table_name, columns in table_columns_mapping.items():
+    print(f"Fetching data from table: {table_name}")
+    
+    # Get data from the specified table and selected columns
+    data = report.get_data(table_name)
+    
+    # Select only the desired columns
+    selected_data = data[columns]
+    
+    # Do something with the selected data (e.g., print the first 5 rows)
+    print(selected_data.head())
+
+# Close the Power BI connection
+report.close()
+
+
