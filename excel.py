@@ -20,3 +20,22 @@ pivot_df.reset_index(inplace=True)
 # Save the pivoted DataFrame to a new Excel file
 output_excel_path = 'path/to/your/output/file.xlsx'
 pivot_df.to_excel(output_excel_path, index=False)
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+import pandas as pd
+
+# Load the Excel file into a DataFrame
+df = pd.read_excel('your_excel_file.xlsx')
+
+# Create a new DataFrame with columns 'PlantName', 'ProductCategory', 'PlantCountry'
+result_df = pd.DataFrame(columns=['PlantName', 'ProductCategory', 'PlantCountry'])
+
+# Populate the new DataFrame with values from the original DataFrame
+result_df['PlantName'] = df['PlantName']
+result_df['ProductCategory'] = df['ProductCategory']
+result_df['PlantCountry'] = df['PlantCountry']
+
+# Save the result DataFrame to a new Excel file
+result_df.to_excel('result_excel_file.xlsx', index=False)
+
