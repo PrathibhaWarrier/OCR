@@ -101,3 +101,30 @@ export class SignalChannelTypesComponent {
 </table>
 </div>
 
+Error///////////////////
+
+Error: src/app/feature-modules/signal/signal-channel-types/signal-channel-types.component.html:3:26 - error TS2339: Property 'length' does not exist on type 'signalChannelStatistics'.
+
+3   <div *ngIf="datasource.length === 0" style="text-align: center;">No data available</div>
+                           ~~~~~~
+
+  src/app/feature-modules/signal/signal-channel-types/signal-channel-types.component.ts:8:16
+    8   templateUrl: './signal-channel-types.component.html',
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Error occurs in the template of component SignalChannelTypesComponent.
+
+
+Error: src/app/feature-modules/signal/signal-channel-types/signal-channel-types.component.html:4:21 - error TS2322: Type 'signalChannelStatistics' is not assignable to type 'CdkTableDataSourceInput<any>'.
+
+4   <table mat-table [dataSource]="datasource " class="mat-elevation-z8">
+                      ~~~~~~~~~~
+
+  src/app/feature-modules/signal/signal-channel-types/signal-channel-types.component.ts:8:16
+    8   templateUrl: './signal-channel-types.component.html',
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Error occurs in the template of component SignalChannelTypesComponent.
+
+
+
+
+× Failed to compile.
