@@ -180,3 +180,21 @@ export class EventComponent implements OnInit {
     this.autoFill();
   }
 }
+
+
+Error:
+Error: src/app/feature-modules/signal/event/event.component.ts:36:22 - error TS2345: Argument of type 'any[]' is not assignable to parameter of type 'FileList'.
+  Property 'item' is missing in type 'any[]' but required in type 'FileList'.
+
+36     this.uploadFiles(this.eventFiles);
+                        ~~~~~~~~~~~~~~~
+
+  ../../node_modules/typescript/lib/lib.dom.d.ts:8283:5
+    8283     item(index: number): File | null;
+             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    'item' is declared here.
+
+
+
+
+× Failed to compile.
